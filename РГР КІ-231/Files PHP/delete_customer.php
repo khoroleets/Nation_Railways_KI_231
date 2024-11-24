@@ -1,4 +1,13 @@
 <?php
+session_start(); // Початок сесії
+
+// Якщо користувач не авторизований, перенаправляємо на сторінку входу
+if (!isset($_SESSION['user_id'])) {
+    $_SESSION['redirect_to'] = $_SERVER['REQUEST_URI']; // Зберігаємо поточну сторінку
+    header("Location: login.php"); // Перенаправляємо на сторінку входу
+    exit;
+}
+
 include 'db_connection.php'; // Підключення до бази даних
 
 // Код для видалення клієнта
@@ -19,11 +28,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['customer_id'])) {
     }
 }
 
-// Отримати список клієнтів для вибору
-$query = "SELECT customer_id, name FROM customer"; // Отримуємо ID та ім'я клієнтів
-$stmt = $pdo->prepare($query);
-$stmt->execute();
-$customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    // Отримати список клієнтів для вибору
+    $query = "SELECT customer_id, name FROM customer"; // Отримуємо ID та ім'я клієнтів
+    $stmt = $pdo->prepare($query);
+    $stmt->execute();
+    $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $error_message = "Помилка: " . $e->getMessage();
+}
 ?>
 
 <!DOCTYPE html>
@@ -41,6 +54,11 @@ $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <?php elseif (isset($error_message)): ?>
         <p style="color: red;"><?php echo htmlspecialchars($error_message); ?></p>
     <?php endif; ?>
+
+    <!-- Форма для виходу з системи -->
+    <form method="POST" action="logout.php" style="margin-bottom: 20px;">
+        <input type="submit" value="Вийти з системи">
+    </form>
 
     <form method="POST">
         <label for="customer_id">Оберіть клієнта:</label>

@@ -1,4 +1,13 @@
 <?php
+session_start(); // Початок сесії
+
+// Якщо користувач не авторизований, перенаправляємо на сторінку входу
+if (!isset($_SESSION['user_id'])) {
+    $_SESSION['redirect_to'] = $_SERVER['REQUEST_URI']; // Зберігаємо поточну сторінку
+    header("Location: login.php"); // Перенаправляємо на сторінку входу
+    exit;
+}
+
 include 'db_connection.php'; // Підключення до бази даних
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -47,6 +56,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 </head>
 <body>
     <h1>Додати нового водія</h1>
+
+    <!-- Кнопка для виходу з системи -->
+    <form method="POST" action="logout.php" style="margin-bottom: 20px;">
+        <input type="submit" value="Вийти з системи">
+    </form>
+
     <form method="POST">
         <label for="name">Ім'я:</label>
         <input type="text" name="name" placeholder="Ваше ім'я" required>

@@ -1,22 +1,38 @@
 <?php
+session_start(); // Початок сесії
+
+// Якщо користувач не авторизований, перенаправляємо на сторінку входу
+if (!isset($_SESSION['user_id'])) {
+    $_SESSION['redirect_to'] = $_SERVER['REQUEST_URI']; // Зберігаємо поточну сторінку
+    header("Location: login.php"); // Перенаправляємо на сторінку входу
+    exit;
+}
+
 include 'db_connection.php'; // Підключення до бази даних
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['dispatcher_id'])) {
     $dispatcher_id = $_POST['dispatcher_id'];
 
-    // Видалення диспетчера
-    $query = "DELETE FROM dispatcher WHERE dispatcher_id = :dispatcher_id";
-    $stmt = $pdo->prepare($query);
-    $stmt->execute(['dispatcher_id' => $dispatcher_id]);
-
-    echo "Диспетчера видалено успішно!";
+    try {
+        // Видалення диспетчера
+        $query = "DELETE FROM dispatcher WHERE dispatcher_id = :dispatcher_id";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute(['dispatcher_id' => $dispatcher_id]);
+        $success_message = "Диспетчера видалено успішно!";
+    } catch (PDOException $e) {
+        $error_message = "Помилка: " . $e->getMessage();
+    }
 }
 
 // Отримати список диспетчерів для вибору
-$query = "SELECT dispatcher_id, name FROM dispatcher"; // Отримуємо ID та ім'я диспетчерів
-$stmt = $pdo->prepare($query);
-$stmt->execute();
-$dispatchers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $query = "SELECT dispatcher_id, name FROM dispatcher"; // Отримуємо ID та ім'я диспетчерів
+    $stmt = $pdo->prepare($query);
+    $stmt->execute();
+    $dispatchers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $error_message = "Помилка: " . $e->getMessage();
+}
 ?>
 
 <!DOCTYPE html>
@@ -27,6 +43,20 @@ $dispatchers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </head>
 <body>
     <h1>Видалити диспетчера</h1>
+
+    <!-- Повідомлення про успіх або помилку -->
+    <?php if (isset($success_message)): ?>
+        <p style="color: green;"><?php echo htmlspecialchars($success_message); ?></p>
+    <?php elseif (isset($error_message)): ?>
+        <p style="color: red;"><?php echo htmlspecialchars($error_message); ?></p>
+    <?php endif; ?>
+
+    <!-- Форма для виходу з системи -->
+    <form method="POST" action="logout.php" style="margin-bottom: 20px;">
+        <input type="submit" value="Вийти з системи">
+    </form>
+
+    <!-- Форма вибору диспетчера для видалення -->
     <form method="POST">
         <label for="dispatcher_id">Оберіть диспетчера:</label>
         <select name="dispatcher_id" required>

@@ -1,4 +1,13 @@
 <?php
+session_start(); // Початок сесії
+
+// Якщо користувач не авторизований, перенаправляємо на сторінку входу
+if (!isset($_SESSION['user_id'])) {
+    $_SESSION['redirect_to'] = $_SERVER['REQUEST_URI']; // Зберігаємо поточну сторінку
+    header("Location: login.php"); // Перенаправляємо на сторінку входу
+    exit;
+}
+
 include 'db_connection.php'; // Підключення до бази даних
 
 try {
@@ -33,6 +42,12 @@ try {
 </head>
 <body>
     <h1>Список диспетчерів</h1>
+
+    <!-- Форма для виходу з системи -->
+    <form method="POST" action="logout.php" style="margin-bottom: 20px;">
+        <input type="submit" value="Вийти з системи">
+    </form>
+
     <table border="1">
         <tr>
             <th>Ім'я</th>

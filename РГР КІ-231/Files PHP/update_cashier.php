@@ -1,5 +1,13 @@
 <?php
-session_start();
+session_start(); // Початок сесії
+
+// Якщо користувач не авторизований, перенаправляємо на сторінку входу
+if (!isset($_SESSION['user_id'])) {
+    $_SESSION['redirect_to'] = $_SERVER['REQUEST_URI']; // Зберігаємо поточну сторінку
+    header("Location: login.php"); // Перенаправляємо на сторінку входу
+    exit;
+}
+
 include 'db_connection.php'; // Підключення до бази даних
 
 $connectionSuccess = false; // Перемінна для відстеження статусу з'єднання
@@ -52,7 +60,7 @@ if ($connectionSuccess && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['
 
     // Фільтрація номера через FILTER_SANITIZE_NUMBER_INT
     $phone_number = filter_var($phone_number, FILTER_SANITIZE_NUMBER_INT);
-	
+    
     // Оновлення даних касира
     if (isset($_POST['cashier_id'])) {
         $cashier_id = $_POST['cashier_id'];
@@ -99,7 +107,19 @@ $cashiers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </head>
 <body>
     <h1>Оновити касира</h1>
-    
+
+    <!-- Повідомлення про успіх або помилку -->
+    <?php if (isset($success_message)): ?>
+        <p style="color: green;"><?php echo htmlspecialchars($success_message); ?></p>
+    <?php elseif (isset($error_message)): ?>
+        <p style="color: red;"><?php echo htmlspecialchars($error_message); ?></p>
+    <?php endif; ?>
+
+    <!-- Форма для виходу з системи -->
+    <form method="POST" action="logout.php" style="margin-bottom: 20px;">
+        <input type="submit" value="Вийти з системи">
+    </form>
+
     <!-- Форма для вибору касира та редагування -->
     <form method="POST">
         <label for="cashier_id">Оберіть касира:</label>

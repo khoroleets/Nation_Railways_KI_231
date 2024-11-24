@@ -1,5 +1,15 @@
-<?php 
-session_start();
+<?php
+session_start(); // Початок сесії
+
+// Якщо користувач не авторизований, перенаправляємо на сторінку входу
+if (!isset($_SESSION['user_id'])) {
+    $_SESSION['redirect_to'] = $_SERVER['REQUEST_URI']; // Зберігаємо поточну сторінку
+    header("Location: login.php"); // Перенаправляємо на сторінку входу
+    exit;
+}
+
+include('auth.php'); // Включаємо перевірку авторизації
+
 include 'db_connection.php'; // Підключення до бази даних
 
 $connectionSuccess = false; // Перемінна для відстеження статусу з'єднання
@@ -9,8 +19,10 @@ try {
     $connectionSuccess = true;
 } catch (PDOException $e) {
     echo "Помилка підключення: " . $e->getMessage();
+    exit;
 }
 
+// Якщо запит POST, виконуємо логіку додавання касира
 if ($connectionSuccess && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['name'], $_POST['year'], $_POST['month'], $_POST['day'], $_POST['phone_number'])) {
     // Очищення та валідація даних
     $name = filter_var(trim($_POST['name']), FILTER_SANITIZE_STRING);
@@ -62,10 +74,8 @@ if ($connectionSuccess && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['
     $stmt->execute([$next_cashier_id, $name, $date_of_birth, $phone_number]);
     echo "Касира додано успішно!";
 } elseif ($connectionSuccess) {
-    echo "";
-}
+    // Відображення форми, якщо запит не POST
 ?>
-
 <!DOCTYPE html>
 <html lang="uk">
 <head>
@@ -96,7 +106,14 @@ if ($connectionSuccess && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['
 </head>
 <body>
     <h1>Додати нового касира</h1>
-    <form method="POST">
+
+    <!-- Кнопка для виходу з системи -->
+    <form method="POST" action="logout.php" style="margin-bottom: 20px;">
+        <input type="submit" value="Вийти з системи">
+    </form>
+
+    <!-- Форма для додавання касира -->
+    <form method="POST" action="add_cashier.php">
         <label for="name">Ім'я:</label>
         <input type="text" name="name" placeholder="Ваше ім'я" required>
         <br>
@@ -112,13 +129,17 @@ if ($connectionSuccess && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['
         <label for="phone_number">Номер телефону:</label>
         <input type="text" name="phone_number" placeholder="Ваш номер телефону (з 0)" required>
         <br>
-        <input type="submit" value="Додати">
+        <input type="submit" value="Додати касира">
     </form>
 
+    <!-- Кнопка для повернення на головну сторінку -->
     <div class="button-container">
-        <a href="http://localhost/nation_railways/main.php" class="return-button">
+        <a href="main.php" class="return-button">
             Повернутись до головної сторінки
         </a>
     </div>
 </body>
 </html>
+<?php
+}
+?>

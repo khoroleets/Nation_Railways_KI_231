@@ -1,22 +1,39 @@
 <?php
+session_start(); // Початок сесії
+
+// Якщо користувач не авторизований, перенаправляємо на сторінку входу
+if (!isset($_SESSION['user_id'])) {
+    $_SESSION['redirect_to'] = $_SERVER['REQUEST_URI']; // Зберігаємо поточну сторінку
+    header("Location: login.php"); // Перенаправляємо на сторінку входу
+    exit;
+}
+
 include 'db_connection.php'; // Підключення до бази даних
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['cashier_id'])) {
     $cashier_id = $_POST['cashier_id'];
 
-    // Видалення касира
-    $query = "DELETE FROM cashier WHERE cashier_id = :cashier_id";
-    $stmt = $pdo->prepare($query);
-    $stmt->execute(['cashier_id' => $cashier_id]);
+    try {
+        // Видалення касира
+        $query = "DELETE FROM cashier WHERE cashier_id = :cashier_id";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute(['cashier_id' => $cashier_id]);
 
-    echo "Касира видалено успішно!";
+        echo "Касира видалено успішно!";
+    } catch (PDOException $e) {
+        echo "Помилка під час видалення касира: " . $e->getMessage();
+    }
 }
 
-// Отримати список касирів для вибору
-$query = "SELECT cashier_id, name FROM cashier";
-$stmt = $pdo->prepare($query);
-$stmt->execute();
-$cashiers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    // Отримати список касирів для вибору
+    $query = "SELECT cashier_id, name FROM cashier";
+    $stmt = $pdo->prepare($query);
+    $stmt->execute();
+    $cashiers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    echo "Помилка підключення: " . $e->getMessage();
+}
 ?>
 
 <!DOCTYPE html>
@@ -27,6 +44,12 @@ $cashiers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </head>
 <body>
     <h1>Видалити касира</h1>
+
+    <!-- Форма для виходу з системи -->
+    <form method="POST" action="logout.php" style="margin-bottom: 20px;">
+        <input type="submit" value="Вийти з системи">
+    </form>
+
     <form method="POST">
         <label for="cashier_id">Оберіть касира:</label>
         <select name="cashier_id" required>

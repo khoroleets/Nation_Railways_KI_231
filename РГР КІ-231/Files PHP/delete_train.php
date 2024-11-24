@@ -1,4 +1,13 @@
 <?php
+session_start(); // Початок сесії
+
+// Якщо користувач не авторизований, перенаправляємо на сторінку входу
+if (!isset($_SESSION['user_id'])) {
+    $_SESSION['redirect_to'] = $_SERVER['REQUEST_URI']; // Зберігаємо поточну сторінку
+    header("Location: login.php"); // Перенаправляємо на сторінку входу
+    exit;
+}
+
 include 'db_connection.php'; // Підключення до бази даних
 
 // Отримання списку потягів
@@ -15,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['train_id'])) {
     $stmt = $pdo->prepare($query);
     $stmt->execute(['train_id' => $train_id]);
 
-    echo "Потяг видалено успішно!";
+    $success_message = "Потяг видалено успішно!";
 }
 
 // Отримання списку потягів для відображення
@@ -33,6 +42,20 @@ if (isset($_GET['show_trains'])) {
 </head>
 <body>
     <h1>Видалити потяг</h1>
+
+    <!-- Повідомлення про успіх або помилку -->
+    <?php if (isset($success_message)): ?>
+        <p style="color: green;"><?php echo htmlspecialchars($success_message); ?></p>
+    <?php elseif (isset($error_message)): ?>
+        <p style="color: red;"><?php echo htmlspecialchars($error_message); ?></p>
+    <?php endif; ?>
+
+    <!-- Форма для виходу з системи -->
+    <form method="POST" action="logout.php" style="margin-bottom: 20px;">
+        <input type="submit" value="Вийти з системи">
+    </form>
+
+    <!-- Форма для видалення потяга -->
     <form method="POST">
         <label for="train_id">Оберіть потяг за його ID:</label>
         <select name="train_id" required>
@@ -43,13 +66,15 @@ if (isset($_GET['show_trains'])) {
         <br>
         <input type="submit" value="Видалити">
     </form>
+
     <br>
-    
+
+    <!-- Форма для показу наявних потягів -->
     <form method="GET">
         <input type="hidden" name="show_trains" value="1">
         <input type="submit" value="Показати наявні потяги">
     </form>
-    
+
     <?php if ($display_trains): ?>
         <h2>Список наявних потягів</h2>
         <table border="1">

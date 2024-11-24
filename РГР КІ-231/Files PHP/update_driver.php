@@ -1,41 +1,52 @@
 <?php
+session_start(); // Початок сесії
+
+// Якщо користувач не авторизований, перенаправляємо на сторінку входу
+if (!isset($_SESSION['user_id'])) {
+    $_SESSION['redirect_to'] = $_SERVER['REQUEST_URI']; // Зберігаємо поточну сторінку
+    header("Location: login.php"); // Перенаправляємо на сторінку входу
+    exit;
+}
+
 include 'db_connection.php'; // Підключення до бази даних
 
-// Отримання даних водія для редагування
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['driver_id'])) {
-    $driver_id = $_POST['driver_id'];
-    $name = isset($_POST['name']) ? $_POST['name'] : '';
-    $work_experience = isset($_POST['work_experience']) ? $_POST['work_experience'] : '';
+$connectionSuccess = false; // Перемінна для відстеження статусу з'єднання
+try {
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $connectionSuccess = true;
+} catch (PDOException $e) {
+    echo "Помилка підключення: " . $e->getMessage();
+}
 
-    // Оновлення даних водія, якщо всі поля заповнені
-    if ($name && $work_experience !== '') {
-        // Перевірка на коректність імені (лише літери)
-        if (!preg_match("/^[a-zA-Zа-яА-ЯіїєІЇЄ' ]+$/u", $name)) {
-            echo "Помилка: Ім'я може містити тільки букви.";
-            exit;
-        }
+// Обробка редагування водія
+if ($connectionSuccess && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['driver_id'], $_POST['name'], $_POST['work_experience'])) {
+    // Очищення та валідація даних
+    $name = filter_var(trim($_POST['name']), FILTER_SANITIZE_STRING);
+    $work_experience = trim($_POST['work_experience']);
 
-        // Перевірка на числове значення досвіду роботи
-        if (!is_numeric($work_experience) || $work_experience < 0) {
-            echo "Помилка: Досвід роботи має бути числом більше або рівним нулю.";
-            exit;
-        }
+    // Валідація імені
+    if (!preg_match("/^[a-zA-Zа-яА-ЯіїєІЇЄ' ]{1,50}$/u", $name)) {
+        echo "Помилка: Некоректне ім'я.";
+        exit;
+    }
 
-        $query = "UPDATE driver SET name = :name, work_experience = :work_experience WHERE driver_id = :driver_id";
-        $stmt = $pdo->prepare($query);
-        $stmt->execute([
-            'name' => $name,
-            'work_experience' => $work_experience,
-            'driver_id' => $driver_id
-        ]);
+    // Валідація досвіду роботи
+    if (!is_numeric($work_experience) || $work_experience < 0) {
+        echo "Помилка: Досвід роботи має бути числом більше або рівним нулю.";
+        exit;
+    }
 
-        echo "Дані водія оновлено успішно!";
-    } else {
-        echo "Будь ласка, заповніть усі поля.";
+    // Оновлення даних водія
+    if (isset($_POST['driver_id'])) {
+        $driver_id = $_POST['driver_id'];
+        $stmt = $pdo->prepare("UPDATE driver SET name = ?, work_experience = ? WHERE driver_id = ?");
+        $stmt->execute([$name, $work_experience, $driver_id]);
+        $success_message = "Дані водія оновлено успішно!";
     }
 }
 
-// Отримати список водіїв для вибору
+// Отримання списку водіїв для вибору
 $query = "SELECT driver_id, name FROM driver";
 $stmt = $pdo->prepare($query);
 $stmt->execute();
@@ -47,9 +58,45 @@ $drivers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <head>
     <meta charset="UTF-8">
     <title>Оновити водія</title>
+    <style>
+        .button-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .return-button {
+            display: inline-block;
+            padding: 5px 10px;
+            background-color: #fff;
+            color: #000;
+            border: 2px solid #000;
+            text-decoration: none;
+            font-size: 1em;
+            font-weight: bold;
+            border-radius: 8px;
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .return-button:hover {
+            background-color: #f0f0f0;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+    </style>
 </head>
 <body>
     <h1>Оновити водія</h1>
+
+    <!-- Повідомлення про успіх або помилку -->
+    <?php if (isset($success_message)): ?>
+        <p style="color: green;"><?php echo htmlspecialchars($success_message); ?></p>
+    <?php elseif (isset($error_message)): ?>
+        <p style="color: red;"><?php echo htmlspecialchars($error_message); ?></p>
+    <?php endif; ?>
+
+    <!-- Форма для виходу з системи -->
+    <form method="POST" action="logout.php" style="margin-bottom: 20px;">
+        <input type="submit" value="Вийти з системи">
+    </form>
+
+    <!-- Форма для вибору водія та редагування -->
     <form method="POST">
         <label for="driver_id">Оберіть водія:</label>
         <select name="driver_id" id="driver_id" required>
@@ -61,6 +108,7 @@ $drivers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <input type="submit" value="Оновити">
     </form>
 
+    <!-- Форма для редагування даних водія -->
     <h2>Дані водія</h2>
     <?php
     if (isset($_POST['driver_id'])) {
@@ -88,18 +136,8 @@ $drivers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     ?>
 
-    <!-- Кнопка для повернення на головну сторінку -->
-    <div style="text-align: center; margin-top: 20px;">
-        <a href="http://localhost/nation_railways/main.php" style="
-            display: inline-block;
-            padding: 5px 10px;
-            border: 2px solid black;
-            color: black;
-            text-decoration: none;
-            font-size: 1em;
-            font-weight: bold;
-            border-radius: 5px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;">
+    <div class="button-container">
+        <a href="http://localhost/nation_railways/main.php" class="return-button">
             Повернутись до головної сторінки
         </a>
     </div>

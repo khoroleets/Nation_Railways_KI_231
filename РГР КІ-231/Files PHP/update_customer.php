@@ -1,5 +1,13 @@
 <?php
-session_start();
+session_start(); // Початок сесії
+
+// Якщо користувач не авторизований, перенаправляємо на сторінку входу
+if (!isset($_SESSION['user_id'])) {
+    $_SESSION['redirect_to'] = $_SERVER['REQUEST_URI']; // Зберігаємо поточну сторінку
+    header("Location: login.php"); // Перенаправляємо на сторінку входу
+    exit;
+}
+
 include 'db_connection.php'; // Підключення до бази даних
 
 $connectionSuccess = false; // Перемінна для відстеження статусу з'єднання
@@ -52,13 +60,13 @@ if ($connectionSuccess && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['
 
     // Фільтрація номера через FILTER_SANITIZE_NUMBER_INT
     $phone_number = filter_var($phone_number, FILTER_SANITIZE_NUMBER_INT);
-	
+    
     // Оновлення даних клієнта
     if (isset($_POST['customer_id'])) {
         $customer_id = $_POST['customer_id'];
         $stmt = $pdo->prepare("UPDATE customer SET name = ?, date_of_birth = ?, phone_number = ? WHERE customer_id = ?");
         $stmt->execute([$name, $date_of_birth, $phone_number, $customer_id]);
-        echo "Дані клієнта оновлено успішно!";
+        $success_message = "Дані клієнта оновлено успішно!";
     }
 }
 
@@ -99,7 +107,19 @@ $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </head>
 <body>
     <h1>Оновити клієнта</h1>
-    
+
+    <!-- Повідомлення про успіх або помилку -->
+    <?php if (isset($success_message)): ?>
+        <p style="color: green;"><?php echo htmlspecialchars($success_message); ?></p>
+    <?php elseif (isset($error_message)): ?>
+        <p style="color: red;"><?php echo htmlspecialchars($error_message); ?></p>
+    <?php endif; ?>
+
+    <!-- Форма для виходу з системи -->
+    <form method="POST" action="logout.php" style="margin-bottom: 20px;">
+        <input type="submit" value="Вийти з системи">
+    </form>
+
     <!-- Форма для вибору клієнта та редагування -->
     <form method="POST">
         <label for="customer_id">Оберіть клієнта:</label>
